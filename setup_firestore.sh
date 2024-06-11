@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Check if the correct number of arguments are provided
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <project_id> <bucket_location>"
-    exit 1
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <project_id>"
+    exit 0
 fi
 
 # Assign the arguments to variables
 PROJECT_ID=$1
-BUCKET_LOCATION=$2
+BUCKET_LOCATION='us-central1'
 
 # Authenticate with GCP
 echo "Authenticating with GCP..."
