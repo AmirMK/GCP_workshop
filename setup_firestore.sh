@@ -1,14 +1,27 @@
 #!/bin/bash
 
+# Function to print usage
+usage() {
+    echo "Usage: $0"
+    exit 1
+}
+
 # Check if the correct number of arguments are provided
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <project_id>"
-    exit 0
+if [ "$#" -ne 0 ]; then
+    usage
 fi
 
-# Assign the arguments to variables
-PROJECT_ID=$1
-BUCKET_LOCATION='us-central1'
+# Set the bucket location to a fixed value
+BUCKET_LOCATION="us-central1"
+
+# Get the current project ID
+PROJECT_ID=$(gcloud config get-value project)
+
+# Check if project ID is retrieved
+if [ -z "$PROJECT_ID" ]; then
+    echo "No project ID set. Please set the project using 'gcloud config set project <project_id>'."
+    exit 1
+fi
 
 # Authenticate with GCP
 echo "Authenticating with GCP..."
