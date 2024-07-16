@@ -9,9 +9,10 @@ PROJECT_ID=$(gcloud config get-value project)
 REGION=us-central1
 ADBCLUSTER=alloydb-aip-01
 INSTANCE_NAME=instance-1
-ZONE=us-central1-b
+ZONE=us-central1-c
 
 echo "Starting the setup process..."
+
 
 # Inside the VM
 
@@ -52,6 +53,9 @@ echo 'eval "$(pyenv init -)"' >> ~/.bashrc
 echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
 source ~/.bashrc
 echo "pyenv installed."
+
+# Source ~/.bashrc to ensure pyenv is available in the current session
+source ~/.bashrc
 
 # Install Python 3.11.6
 echo "Installing Python 3.11.6..."
