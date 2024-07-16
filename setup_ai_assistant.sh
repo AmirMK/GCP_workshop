@@ -13,11 +13,6 @@ ZONE=us-central1-c
 
 echo "Starting the setup process..."
 
-# Connect to the VM
-gcloud compute ssh $INSTANCE_NAME --zone=$ZONE << 'EOF'
-set -e
-echo "Connected to VM."
-
 # Inside the VM
 
 # Install PostgreSQL client
@@ -54,7 +49,8 @@ curl https://pyenv.run | bash
 echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
 echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
 echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-exec "$SHELL"
+echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
+source ~/.bashrc
 echo "pyenv installed."
 
 # Install Python 3.11.6
@@ -111,13 +107,3 @@ export BASE_URL=$(gcloud run services list --filter="(retrieval-service)" --form
 export ORCHESTRATION_TYPE=langchain-tools
 python run_app.py
 echo "Assistant application running."
-
-# Exit the SSH session
-EOF
-echo "Exited SSH session."
-
-# After running the script, manually open the Web Preview in Cloud Shell
-echo "Click on the 'Web preview' button on the right top of your Cloud Shell and choose 'Preview on port 8081'."
-
-# Note to manually close the Python application running the SFO Airport Assistant web server
-echo "When done, close the browser tab and enter Ctrl-C to exit the Python application."
