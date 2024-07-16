@@ -9,7 +9,7 @@ PROJECT_ID=$(gcloud config get-value project)
 REGION=us-central1
 ADBCLUSTER=alloydb-aip-01
 INSTANCE_NAME=instance-1
-ZONE=us-central1-c
+ZONE=us-central1-b
 
 echo "Starting the setup process..."
 
