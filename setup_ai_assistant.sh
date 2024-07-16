@@ -116,20 +116,6 @@ echo "Assistant application running."
 EOF
 echo "Exited SSH session."
 
-# Add firewall rule to allow traffic on port 8081
-echo "Adding firewall rule to allow traffic on port 8081..."
-gcloud compute firewall-rules create allow-8081 \
-    --allow tcp:8081 \
-    --source-ranges 0.0.0.0/0 \
-    --target-tags http-server \
-    --description "Allow port 8081 traffic"
-echo "Firewall rule added."
-
-# Open SSH tunnel for web preview
-echo "Opening SSH tunnel for web preview..."
-gcloud compute ssh $INSTANCE_NAME --zone=$ZONE -- -L 8081:localhost:8081
-echo "SSH tunnel opened."
-
 # After running the script, manually open the Web Preview in Cloud Shell
 echo "Click on the 'Web preview' button on the right top of your Cloud Shell and choose 'Preview on port 8081'."
 
