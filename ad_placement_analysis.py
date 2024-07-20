@@ -269,7 +269,7 @@ def main():
     LOCATION = "us-central1"
 
 
-    bucket_name = 'genai-test-2'
+    bucket_name = f"bucket-{PROJECT_ID}-video-analysis"
     destionation = 'movie_processing_output'
     origine = 'movie_processing_input'
 
