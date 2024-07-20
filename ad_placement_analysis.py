@@ -265,7 +265,7 @@ def post_processing(response, movie_name, bucket_name, destionation):
             pass
 
 def main():
-    PROJECT_ID = "lab-project-426319"
+    PROJECT_ID = [project-id]
     LOCATION = "us-central1"
 
 
