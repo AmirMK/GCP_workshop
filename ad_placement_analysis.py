@@ -2,11 +2,13 @@ import sys
 import os
 
 import time
+from datetime import datetime, timedelta
 import json
 import re
 
 
 from google.cloud import storage
+from google.cloud import bigquery
 
 import pandas as pd
 import datetime
@@ -32,42 +34,57 @@ from vertexai.generative_models import (
 
 
 def prompt_builder():                
+ 
     scene_transition = '''
 
-      I have a video that I need you to analyze for ad placement by detecting scene changes, 
-      also known as shot boundaries. I need to identify the 10 best scene changes across the 
-      entire movie, which are the best potential points for ad placement as they minimize 
-      interruptions for viewers. These scene changes should be selected from all parts of the movie: 
-      the beginning, middle, and the very end. Make sure you distribute the selected scenes evenly across 
-      the entire movie.
+       I have a video that I need you to analyze for ad placement by detecting scene changes, 
+       also known as shot boundaries. I need to identify the 10 best scene changes across the 
+       entire movie, which are the best potential points for ad placement as they minimize 
+       interruptions for viewers. These scene changes should be selected from all parts of the movie: 
+       the beginning, middle, and the very end. Make sure you distribute the selected scenes evenly across 
+       the entire movie.
        For each of these scene changes, please provide:
 
         timestamp: The exact timestamps indicating where the scene change occurs. Make sure that the timestamp of scenes are matched those in the original movie,
         reflecting its position accurately. The timestamps must exactly match those in the original movie.
         
-      
-        reason: The reason why this is a scene change and why it is a good location for ad placement. the reaosn 
-        shoudl be very specific. Summrize the story after and before the scene and the explain why 
-        between these two scence is a good place for an ad.
+        reason: The reason why this is a scene change and why it is a good location for ad placement. the reason 
+        should be very specific. Summarize the story after and before the scene and the explain why 
+        between these two scene is a good place for an ad.
         
-        transition_type: The feeling that the transition make in viewiers like exictment, peace, fear, etc.
+        summary: A brief summary of the scene before the change.
+        
+        transition_feeling: The list of the feelings that the transition makes in viewers like excitement, peace, fear, etc.
+        
+        transition_type: The method used to switch from one scene to another like cuts, fades, dissolves, etc.
+        
+        narrative_type: The list of the role or significance of the scene in the storyline like pivotal, climatic, conflict, etc.
+        
+        dialogue_intensity: The amount and intensity of dialogue in the scene like monologue, dialogue, narration, debate, etc.
 
-      Please provide the output in the form of list of json.
+        characters_type: The types of characters involved in the scene transition like protagonist, antagonist, supporting, etc.
+        
+        scene_categories:  Classification of the scene before the change into the categories such as action, drama, comedy, etc.
+
+       Please provide the output in the form of a list of json.
+
+      
       '''      
+
     
 
     
     return  scene_transition
 
 
-def generate_scene(PROJECT_ID, LOCATION, video_file_url,prompt):
+def generate_scene(project_id, location, video_file_url,prompt):
     
     generation_config = GenerationConfig(temperature=0)
-    vertexai.init(project=PROJECT_ID, location=LOCATION)
-    MODEL_ID = "gemini-1.5-pro-001"  
+    vertexai.init(project=project_id, location=location)
+    model_id = "gemini-1.5-pro-001"  
        
     
-    model = GenerativeModel(MODEL_ID)                           
+    model = GenerativeModel(model_id)                           
     
     video_file = Part.from_uri(video_file_url, mime_type="video/mp4")
     contents = [video_file, prompt]
@@ -77,16 +94,16 @@ def generate_scene(PROJECT_ID, LOCATION, video_file_url,prompt):
     return response
 
 
-def get_json(PROJECT_ID, LOCATION, text):
+def get_json(project_id, location, text):
     
-        vertexai.init(project=PROJECT_ID, location=LOCATION)
+        vertexai.init(project=project_id, location=location)
         generation_config = GenerationConfig(temperature=0)
-        MODEL_ID = "gemini-1.5-pro-001"
-        model = GenerativeModel(MODEL_ID)
+        model_id = "gemini-1.5-pro-001"
+        model = GenerativeModel(model_id)
        
                
         get_movie_scene_properties = FunctionDeclaration(
-            name="get_characters_information",
+            name="get_scene_information",
             description="Get the scene information",
             parameters={
                 "type": "object",
@@ -99,8 +116,14 @@ def get_json(PROJECT_ID, LOCATION, text):
                                 "type": "object",
                                 "properties": {
                                     "timestamp": {"type": "string", "description": "scene timestamp"},
-                                    "reason": {"type": "string", "description": "why the scence is a scence change"},
-                                    "transition_type": {"type": "string", "description": "scene transtions type for vieiwer"},
+                                    "reason": {"type": "string", "description": "why the scence is a scence change"},                                    
+                                    "transition_feeling": {"type": "array", "description": "scene transtions type for vieiwer"},#
+                                    "transition_type": {"type": "string", "description": "The method used to switch from one scene to another like cuts, fades, dissolves, etc."},
+                                    "summary": {"type": "string", "description": "summary of the scene"},
+                                    "narrative_type": {"type": "array", "description": "The list of the role or significance of the scene in the storyline like pivotal, climatic, conflict, etc."}, #
+                                    "dialogue_intensity": {"type": "string", "description": "The amount and intensity of dialogue in the scene like monologue, dialogue, narration, debate, etc."},
+                                    "characters_type": {"type": "array", "description": "The types of characters involved in the scene transition like protagonist, antagonist, supporting, etc."}, #
+                                    "scene_categories": {"type": "array", "description": "Classification of the scene before the change into the categories such as action, drama, comedy, etc."},#
                                     },
                             
                                 }
@@ -195,22 +218,53 @@ def list_files(bucket_name, prefix):
     blobs = bucket.list_blobs(prefix=prefix)
     return [blob.name[len(prefix):].lstrip('/') for blob in blobs]
 
-def compare_files(input_files, output_files):
-    input_file_bases = set(f[:-4] for f in input_files if f.endswith('.mp4'))
-    output_file_bases = set(f[:-4] for f in output_files if f.endswith('.csv'))
-    missing_csv_files = input_file_bases - output_file_bases
-    return [f"{file_base}.mp4" for file_base in missing_csv_files]
 
-def get_files(bucket_name, input_, output_):
+
+def compare_files(input_files, output_files):
+    input_file_bases = set(input_files) #f[:-4] for f in input_files if f.endswith('.mp4'))
+    output_file_bases = set(output_files) #f[:-4] for f in output_files if f.endswith('.csv'))
+    missing_csv_files = input_file_bases - output_file_bases
+    return [f"{file_base}" for file_base in missing_csv_files]
+
+
+def get_distinct_movies(project_id, dataset_id, table_id):
+    client = bigquery.Client(project=project_id)
+    
+    try:
+        # Check if dataset exists
+        dataset_ref = client.dataset(dataset_id)
+        client.get_dataset(dataset_ref)  # Will raise NotFound if dataset does not exist
+        
+        # Check if table exists
+        table_ref = dataset_ref.table(table_id)
+        client.get_table(table_ref)  # Will raise NotFound if table does not exist
+
+        # If dataset and table exist, query distinct values of 'movie' column
+        query = f"""
+        SELECT DISTINCT movie
+        FROM `{project_id}.{dataset_id}.{table_id}`
+        """
+        query_job = client.query(query)
+        results = query_job.result()
+        
+        # Extract distinct movie values
+        movies = [row.movie for row in results]
+        return movies
+    
+    except:
+        return []
+    
+
+def get_files(project_id, dataset_id, table_id, bucket_name, input_):
     input_files = list_files(bucket_name, input_)
-    output_files = list_files(bucket_name, output_)
+    output_files = get_distinct_movies(project_id, dataset_id, table_id)
 
     missing_csv_files = compare_files(input_files, output_files)
     
     return missing_csv_files
 
 
-# Function 1: Extract the list of JSON objects from the string
+
 def extract_json_list(json_string):
     # Remove the surrounding ```json and ``` if present
     if json_string.startswith("```json"):
@@ -221,10 +275,10 @@ def extract_json_list(json_string):
     # Preprocess to escape unescaped double quotes within strings
     def escape_quotes(match):
         # Match groups of text within double quotes and escape double quotes inside them
-        return match.group(0).replace('"', '\\"')
+        return '"' + match.group(1).replace('"', '\\"') + '"'
     
     # Escape unescaped double quotes within the JSON string
-    json_string = re.sub(r'(?<=: ")(.*?)(?=",)', lambda m: m.group(1).replace('"', '\\"'), json_string)
+    json_string = re.sub(r'(?<=:\s)"([^"]*?)"(?=,|})', escape_quotes, json_string)
 
     try:
         json_list = json.loads(json_string)
@@ -235,12 +289,19 @@ def extract_json_list(json_string):
 
     
 
-# Function 2: Inspect the structure of nested JSON objects
 def inspect_json_structure(json_list):
+    required_keys = {"timestamp", "reason", "transition_type", 'summary','transition_feeling','transition_type','narrative_type','dialogue_intensity','characters_type','scene_categories'}
+    
+    
+     
+    
     for item in json_list:
-        if not all(key in item for key in ("timestamp", "reason", "transition_type")):
+        item_keys = set(item.keys())
+        
+        if item_keys != required_keys:
             return False
     return True
+
 
 # Function 3: Convert the list of JSON objects into a DataFrame
 def convert_to_dataframe(json_list):
@@ -248,33 +309,128 @@ def convert_to_dataframe(json_list):
     return df
 
 
-def post_processing(response, movie_name, bucket_name, destionation):
+def post_processing(response, movie_name, bucket_name, destionation, project_id,location):
     json_list = extract_json_list(response.text)
     if json_list is not None and inspect_json_structure(json_list):
         df_respons = convert_to_dataframe(json_list)
-        upload_to_gcs(data = df_respons, bucket_name = bucket_name
-                      , destination_blob_name = f"{destionation}/{movie_name}.csv", data_type = 'csv')
+        #upload_to_gcs(data = df_respons, bucket_name = bucket_name
+        #              , destination_blob_name = f"{destionation}/{movie_name}.csv", data_type = 'csv')
+        return df_respons
     else:
         try:
             print(f'try function calling for {movie_name}...')
+            json_ = get_json(project_id,location,response.text)
             json_list = get_function_args(json_)['scences']
             df_respons = convert_to_dataframe(json_list)
-            upload_to_gcs(data = df_respons, bucket_name = bucket_name
-                      , destination_blob_name = f"{destionation}/{movie_name}.csv", data_type = 'csv')
+            #upload_to_gcs(data = df_respons, bucket_name = bucket_name
+            #          , destination_blob_name = f"{destionation}/{movie_name}.csv", data_type = 'csv')
+            return df_respons
         except:
-            pass
+            return None
 
+def convert_lists_to_json_strings(df):
+    for col in df.columns:
+        if df[col].apply(lambda x: isinstance(x, list)).any():
+            df[col] = df[col].apply(json.dumps)
+    return df
+
+
+def convert_timestamp_columns(df):
+    def parse_time(x):
+        if isinstance(x, str):
+            try:
+                parsed_time = datetime.datetime.strptime(x, '%M:%S')
+                return parsed_time
+            except ValueError:
+                return pd.NaT
+        return x
+    
+    lag = 5
+    df['timestamp'] = df['timestamp'].apply(parse_time)
+    df['start_time'] = df['timestamp'].apply(lambda x: x - timedelta(seconds=lag) if pd.notna(x) else pd.NaT)
+    df['end_time'] = df['timestamp'].apply(lambda x: x + timedelta(seconds=lag) if pd.notna(x) else pd.NaT)
+    
+    
+    return df
+
+def create_dataset_if_not_exists(dataset_id, project_id):
+    client = bigquery.Client()
+    dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
+    try:
+        client.get_dataset(dataset_ref)
+        print(f"Dataset {dataset_id} already exists")
+    except:
+        # Create the dataset if it does not exist
+        dataset = bigquery.Dataset(dataset_ref)
+        dataset.location = "US"  # Specify the location as needed
+        client.create_dataset(dataset)
+        print(f"Created dataset {dataset_id}")
+
+        
+def write_to_bigquery(df, file_name, dataset_id, project_id, table_id):
+    client = bigquery.Client()
+    # Check if the dataset exists and create it if not
+    create_dataset_if_not_exists(dataset_id, project_id)
+    
+    table_id = f"{project_id}.{dataset_id}.{table_id}"
+    
+    # Add 'movie' column to the dataframe
+    df['movie'] = file_name
+    
+    # Convert lists within the dataframe to JSON strings
+    df = convert_lists_to_json_strings(df)
+    
+    # Convert timestamp columns
+    df = convert_timestamp_columns(df)
+    
+    # Define the schema based on the dataframe columns
+    schema = []
+    for column in df.columns:
+        if column == 'movie':
+            schema.append(bigquery.SchemaField(column, 'STRING'))
+        elif column in ['timestamp', 'start_time', 'end_time']:
+            schema.append(bigquery.SchemaField(column, 'TIMESTAMP'))
+        elif pd.api.types.is_numeric_dtype(df[column]):
+            schema.append(bigquery.SchemaField(column, 'FLOAT'))
+        elif pd.api.types.is_datetime64_any_dtype(df[column]):
+            schema.append(bigquery.SchemaField(column, 'TIMESTAMP'))
+        else:
+            schema.append(bigquery.SchemaField(column, 'STRING'))  # Adjust data types as necessary
+    
+    # Define table options
+    table = bigquery.Table(table_id, schema=schema)
+    
+    # Check if the table exists
+    try:
+        client.get_table(table_id)
+    except:
+        # Create the table if it does not exist
+        table = client.create_table(table)
+        print(f"Created table {table_id}")
+
+    # Write the dataframe to the BigQuery table
+    job = client.load_table_from_dataframe(df, table_id)
+    job.result()  # Wait for the job to complete
+    
+    print(f"Data has been written to {table_id}")
+
+    
 def main():
-    PROJECT_ID = [project-id]
-    LOCATION = "us-central1"
-
-
-    bucket_name = f"bucket-{PROJECT_ID}-video-analysis"
+    project_id = "lab-project-426319"
+    location = "us-central1"
+    dataset_id = 'movie_processing'
+    table_id = 'movie_output'
     destionation = 'movie_processing_output'
     origine = 'movie_processing_input'
 
-    movies = get_files(bucket_name, input_ = origine, output_ = destionation)
+    bucket_name = 'genai-test-2'
+    #bucket_name = f"bucket-{project_id}-video-analysis"
 
+    
+
+    movies = get_files(project_id, dataset_id, table_id, bucket_name, input_=origine)
+    print(f'fetching {len(movies)} videos to process...')
+    
     for file in movies:    
         movie_name = file.rsplit('.', 1)[0]    
         video_file_url = f"gs://{bucket_name}/{origine}/{file}"
@@ -282,13 +438,18 @@ def main():
 
         scene_transition = prompt_builder()
         print(f'analysing video: {movie_name}...')
-        response = generate_scene(PROJECT_ID, LOCATION, video_file_url,scene_transition)
+        response = generate_scene(project_id, location, video_file_url,scene_transition)
 
         upload_to_gcs(data = response.text , bucket_name = bucket_name, 
                       destination_blob_name =  f"{destionation}/{movie_name}.text", data_type = 'string')
         print(f'post processing for {movie_name}...')
-        post_processing(response, movie_name, bucket_name, destionation)
-
+        df_respons = post_processing(response, movie_name, bucket_name, destionation, project_id,location)
+        
+        if df_respons is not None:
+            print(f'write to bigquery for {movie_name}...')
+            write_to_bigquery(df_respons, file, dataset_id, project_id,table_id)
+        else:
+            print(f'no data frame generated for {movie_name}...')
 
 if __name__ == "__main__":
     main()
