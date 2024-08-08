@@ -422,9 +422,8 @@ def main():
     table_id = 'movie_output'
     destionation = 'movie_processing_output'
     origine = 'movie_processing_input'
-
-    bucket_name = 'genai-test-2'
-    #bucket_name = f"bucket-{project_id}-video-analysis"
+    
+    bucket_name = f"bucket-{project_id}-video-analysis"
 
     
 
