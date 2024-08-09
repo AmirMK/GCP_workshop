@@ -1,11 +1,9 @@
-projectId: "[project-id]"
-
 workerPoolSpecs:
   - machineSpec:
       machineType: "n1-standard-4"
     replicaCount: 1
     containerSpec:      
-      imageUri: "us-docker.pkg.dev/[projectId]/gcr-video-analysis/ad_placement_analysis:latest"
+      imageUri: "us-docker.pkg.dev/[project-id]/gcr-video-analysis/ad_placement_analysis:latest"
 
-serviceAccount: "ad-placement-service-account@[projectId].iam.gserviceaccount.com"
+serviceAccount: "ad-placement-service-account@[project-id].iam.gserviceaccount.com"
 
