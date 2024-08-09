@@ -89,7 +89,11 @@ def generate_scene(project_id, location, video_file_url,prompt):
     video_file = Part.from_uri(video_file_url, mime_type="video/mp4")
     contents = [video_file, prompt]
 
-    response = model.generate_content(contents,generation_config=generation_config)
+    try:
+        response = model.generate_content(contents,generation_config=generation_config)
+    except:
+        print('generation not proceed...')
+        response = {'text':None}
 
     return response
 
@@ -432,23 +436,27 @@ def main():
     
     for file in movies:    
         movie_name = file.rsplit('.', 1)[0]    
-        video_file_url = f"gs://{bucket_name}/{origine}/{file}"
-
-
-        scene_transition = prompt_builder()
-        print(f'analysing video: {movie_name}...')
-        response = generate_scene(project_id, location, video_file_url,scene_transition)
-
-        upload_to_gcs(data = response.text , bucket_name = bucket_name, 
-                      destination_blob_name =  f"{destionation}/{movie_name}.text", data_type = 'string')
-        print(f'post processing for {movie_name}...')
-        df_respons = post_processing(response, movie_name, bucket_name, destionation, project_id,location)
-        
-        if df_respons is not None:
-            print(f'write to bigquery for {movie_name}...')
-            write_to_bigquery(df_respons, file, dataset_id, project_id,table_id)
+        file_extension = file.rsplit('.', 1)[1]
+        if file_extension.lower() == 'mp4':
+            video_file_url = f"gs://{bucket_name}/{origine}/{file}"
+    
+    
+            scene_transition = prompt_builder()
+            print(f'analysing video: {movie_name}...')
+            response = generate_scene(project_id, location, video_file_url,scene_transition)
+    
+            upload_to_gcs(data = response.text , bucket_name = bucket_name, 
+                          destination_blob_name =  f"{destionation}/{movie_name}.text", data_type = 'string')
+            print(f'post processing for {movie_name}...')
+            df_respons = post_processing(response, movie_name, bucket_name, destionation, project_id,location)
+            
+            if df_respons is not None:
+                print(f'write to bigquery for {movie_name}...')
+                write_to_bigquery(df_respons, file, dataset_id, project_id,table_id)
+            else:
+                print(f'no data frame generated for {movie_name}...')
         else:
-            print(f'no data frame generated for {movie_name}...')
+            print(f'{file} is not video format')
 
 if __name__ == "__main__":
     main()
