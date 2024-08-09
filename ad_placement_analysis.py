@@ -353,8 +353,8 @@ def convert_timestamp_columns(df):
     
     return df
 
-def create_dataset_if_not_exists(dataset_id, project_id):
-    client = bigquery.Client()
+def create_dataset_if_not_exists(dataset_id, project_id):    
+    client = bigquery.Client(project=project_id)
     dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
     try:
         client.get_dataset(dataset_ref)
@@ -367,8 +367,8 @@ def create_dataset_if_not_exists(dataset_id, project_id):
         print(f"Created dataset {dataset_id}")
 
         
-def write_to_bigquery(df, file_name, dataset_id, project_id, table_id):
-    client = bigquery.Client()
+def write_to_bigquery(df, file_name, dataset_id, project_id, table_id):    
+    client = bigquery.Client(project=project_id)
     # Check if the dataset exists and create it if not
     create_dataset_if_not_exists(dataset_id, project_id)
     
@@ -416,7 +416,7 @@ def write_to_bigquery(df, file_name, dataset_id, project_id, table_id):
 
     
 def main():
-    project_id = "lab-project-426319"
+    project_id = "[project-id]"
     location = "us-central1"
     dataset_id = 'movie_processing'
     table_id = 'movie_output'
