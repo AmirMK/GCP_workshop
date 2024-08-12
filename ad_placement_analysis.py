@@ -31,7 +31,7 @@ from vertexai.generative_models import (
     Tool,
 )
 
-import function_call_back as fc
+import function_call_fallback as fc
 import gcp_data_handler as gdata
 
 
