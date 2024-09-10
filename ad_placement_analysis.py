@@ -4,7 +4,6 @@ import os
 import time
 from datetime import datetime, timedelta
 import json
-import re
 
 
 from google.cloud import storage
@@ -31,7 +30,6 @@ from vertexai.generative_models import (
     Tool,
 )
 
-import function_call_fallback as fc
 import gcp_data_handler as gdata
 
 
@@ -56,32 +54,17 @@ def prompt_builder():
         
         summary: A brief summary of the scene before the change.
         
-        transition_feeling: The list of the feelings that the transition makes in viewers like excitement, peace, fear, etc.
+        transition_feeling: The main feeling that the transition makes in viewers like excitement, peace, fear, etc.
         
         transition_type: The method used to switch from one scene to another like cuts, fades, dissolves, etc.
         
-        narrative_type: The list of the role or significance of the scene in the storyline like pivotal, climatic, conflict, etc.
+        narrative_type: The main role or significance of the scene in the storyline like pivotal, climatic, conflict, etc.
         
         dialogue_intensity: The amount and intensity of dialogue in the scene like monologue, dialogue, narration, debate, etc.
 
-        characters_type: The types of characters involved in the scene transition like protagonist, antagonist, supporting, etc.
+        characters_type: The types of the most important character involved in the scene transition like protagonist, antagonist, supporting, etc.
         
         scene_categories:  Classification of the scene before the change into the categories such as action, drama, comedy, etc.
-
-        Using this JSON schema:
-            detected_scence_changes = {"timestamp": str,
-                                        "reason": str,
-                                        "summary": str,
-                                        "transition_feeling": array,
-                                        "transition_type": array,
-                                        "narrative_type": array,
-                                        "dialogue_intensity": str,
-                                        "characters_type": array,
-                                        "scene_categories": array,
-                                        }
-        Return a `list[detected_scence_changes]`
-        
-
       
       '''      
 
@@ -91,13 +74,36 @@ def prompt_builder():
 
 
 def generate_scene(project_id, location, video_file_url,prompt):
-    
-    generation_config = GenerationConfig(temperature=0)
+        
     vertexai.init(project=project_id, location=location)
     model_id = "gemini-1.5-pro-001"  
-           
-    model = GenerativeModel(model_id,
-                       generation_config={"response_mime_type": "application/json"})                  
+    model = GenerativeModel(model_id)
+    
+
+    response_schema = {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "timestamp": {"type": "string"},
+                "reason": {"type": "string"},
+                "transition_feeling": {"type": "string"},
+                "transition_type": {"type": "string"},
+                "narrative_type": {"type": "string"},
+                "dialogue_intensity": {"type": "string"},
+                "characters_type": {"type": "string"},
+                "scene_categories": {"type": "string"},
+
+            },
+            "required": ["timestamp", "reason","transition_feeling","transition_type","narrative_type",
+                        "characters_type","scene_categories"],
+        },
+    }  
+
+    
+    generation_config = GenerationConfig(temperature=0,
+                                    response_mime_type="application/json", 
+                                     response_schema=response_schema)
     
     video_file = Part.from_uri(video_file_url, mime_type="video/mp4")
     contents = [video_file, prompt]
@@ -112,22 +118,6 @@ def generate_scene(project_id, location, video_file_url,prompt):
 
 
 
-def extract_json_list(json_string):
-    # Remove the surrounding ```json and ``` if present
-    if json_string.startswith("```json"):
-        json_string = json_string[len("```json"):].strip()
-    if json_string.endswith("```"):
-        json_string = json_string[:-len("```")].strip()
-        
-    try:
-        json_list = json.loads(json_string)
-        return json_list
-    except json.JSONDecodeError as e:
-        print(f"JSONDecodeError: {e}")
-        return None
-
-    
-
 def inspect_json_structure(json_list):
     required_keys = {"timestamp", "reason", "transition_type", 'summary','transition_feeling','transition_type','narrative_type','dialogue_intensity','characters_type','scene_categories'}
          
@@ -140,21 +130,17 @@ def inspect_json_structure(json_list):
     return True
 
 
-def post_processing(response, movie_name, bucket_name, destionation, project_id,location):
-    json_list = extract_json_list(response.text)
-    if json_list is not None and inspect_json_structure(json_list):
-        df_respons = pd.DataFrame(json_list)
-        return df_respons
-    else:
-        try:
-            print(f'try function calling for {movie_name}...')
-            json_ = fc.function_call(project_id,location,response.text)
-            json_list = fc.get_function_args(json_)['scences']
-            df_respons = pd.DataFrame(json_list)
+def post_processing(response, movie_name, bucket_name, destionation, project_id,location):    
+    try:
+        json_response  =  json.loads(response.text)
+        if inspect_json_structure(json_response):
+            df_respons = pd.DataFrame(json_response)
             return df_respons
-        except:
-            return None
-
+        else:        
+             return None
+    except:
+          return None
+        
     
 def main():
     project_id = "[project-id]"
