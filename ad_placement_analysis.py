@@ -118,8 +118,8 @@ def generate_scene(project_id, location, video_file_url,prompt):
 
 
 
-def inspect_json_structure(json_list):
-    required_keys = {"timestamp", "reason", "transition_type", 'summary','transition_feeling','transition_type','narrative_type','dialogue_intensity','characters_type','scene_categories'}
+def inspect_json_structure(json_list):    
+    required_keys = {'characters_type', 'narrative_type', 'reason', 'scene_categories', 'timestamp', 'transition_feeling', 'transition_type', 'dialogue_intensity'}
          
     
     for item in json_list:
