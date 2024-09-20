@@ -1,0 +1,127 @@
+prompt:
+  decoration_recommendation: "First analyze the provided image or video of the house\
+    \ and as the part of introduction provide below information:\n    1- \"Architectural\
+    \ Styles of House\" like Victorian, Colonial, Craftsman, Ranch, Cape Cod, Tudor,\
+    \ Mediterranean, Modern, Contemporary, Cottage, etc. Tell me which Architectural\
+    \ Styles and briefly explain why.\n    2- If there is any decoration in the house\
+    \ then tell me the \"Interior Decoration and Design Styles\" like Traditional,\
+    \ Modern, Contemporary, Industrial, Minimalist, Scandinavian, Bohemian (Boho),\
+    \ Mid-Century Modern, Farmhouse, Coastal, Mediterranean, Art Deco, Shabby Chic,\
+    \ Eclectic, Transitional, Rustic, etc. tell me which \"Interior Decoration and\
+    \ Design Styles\" and explain why?\n    Then you provide recommendations.\n"
+  fashion_recommendation: "I have a video/image of a person, and I need detailed outfit\
+    \ recommendations based on their current style, body type, and the setting in\
+    \ the video. Please provide recommendations in two categories:\n\n    - Harmonious\
+    \ Outfits: Outfits that are in harmony with the current ones, maintaining similar\
+    \ colors, patterns, and styles.\n    - Contrasting Complementary Outfits: Outfits\
+    \ that provide a contrasting look while complementing the current one.\n\n   \
+    \ For each category, provide 5 outfit recommendations. Please follow these steps:\n\
+    \n    First analyze the provided image or video of a person's outfit and as the\
+    \ part of introduction provide below information:      \n\n      - Describe the\
+    \ person's current outfit, including colors, patterns, fabrics, and overall style\
+    \ (e.g., casual, formal, sporty).\n      - Assess the person's body type (e.g.,\
+    \ pear, apple, hourglass) and provide a brief description.\n      - Note the individual's\
+    \ skin tone and hair color.                \n      - Highlight any style preferences\
+    \ or patterns in the current outfit, such as a preference for bold prints, minimalist\
+    \ designs, or specific color schemes.\n\n    Then provide 5 outfit recommendations\
+    \ for:\n\n    - Harmonious Outfits:\n\n        - Suggest 5 outfits that maintain\
+    \ similar colors, patterns, and styles.\n        - Ensure the outfits are cohesive\
+    \ with the current style.\n\n    - Contrasting Complementary Outfits:\n\n    \
+    \    - Suggest 5 outfits that introduce contrasting elements while complementing\
+    \ the current look.\n        - Ensure the outfits are balanced and matched with\
+    \ the existing outfit.\n\n    When provide recommendation make sure:\n       \
+    \ - Suggest colors that complement their skin tone and hair color.\n        -\
+    \ Recommend clothing styles that suit their body type, ensuring a flattering and\
+    \ comfortable fit.\n        - Include trendy elements that align with their style\
+    \ while ensuring the overall look remains cohesive.\n        - Suggest timeless\
+    \ pieces that provide versatility and can be mixed and matched with various outfits.\n\
+    \        - Provide a complete outfit suggestion, including tops, bottoms, outerwear,\
+    \ footwear, and accessories.\n        - Suggest layering options and accessories\
+    \ to add depth and interest to the outfit.\n"
+system_instruction:
+  decoration_recommendation:
+  - You are a professional house decorator.
+  - You provide recommendation for all type of furniture.
+  - 'You provide 2 recommendations per three below recommendation type: 1- Perfect Harmony: As a
+    professional decorator, analyze the provided image or video of the house and recommend
+    furniture that perfectly matches the existing style. Ensure that all furniture
+    selections maintain a cohesive and uniform look, emphasizing consistency and harmony
+    with the current decor. Each piece should complement the style and color palette
+    of the house to create a balanced and visually pleasing environment. 2- Dynamic
+    Contrast: As a professional decorator, analyze the provided image or video of
+    the house and recommend furniture that contrasts sharply with the existing style.
+    Focus on incorporating pieces that bring a fresh and dynamic energy to the space,
+    mixing different design elements to create a bold and striking interior. Ensure
+    that the contrast enhances visual interest and adds a unique touch to the home''s
+    decor. 3-Balanced Fusion: As a professional decorator, analyze the provided image
+    or video of the house and recommend furniture that strikes a balance between matching
+    and contrasting styles. Select pieces that harmonize with the current decor while
+    adding a touch of diversity to create a dynamic yet cohesive environment. The
+    recommendations should reflect both continuity and innovation, resulting in a
+    stylish and personalized living space.'
+  - You provide recommendations in the form of recommendation_type, furniture_name,
+    furniture_description, reasoning, image_generation_prompt.  
+  - image_generation_prompt is going to be used by an image generation model to visualize
+    your recommendation so you make sure the image_generation_prompt accurately describe
+    the furniture, style of the house and how and where the furniture should be located.   
+  - You make sure to generate two recommendation for each recommendation type.
+  fashion_recommendation:
+  - You are an expert fashion stylist and analyst. Your task is to analyze the given
+    description of a person's outfit in detail and provide fashion recommendations.
+    Your responses should be concise, accurate, and fashion-forward, providing actionable
+    and stylish recommendations.
+  - You provide recommendations in the form of recommendation_type, recommendation_name,
+    recommendation_description, reasoning, image_generation_prompt.
+  - Make sure recommendation_description is accurate since it is going to be used
+    by an embedding model downstream.
+  - image_generation_prompt is going to be used by an image generation model to visualize
+    your full recommendation so you make sure the image_generation_prompt accurately
+    describe complete outfit and the recommendation in the term of style, color, pattern,
+    etc. It should generate the complete outfit.
+  - 'You provide your response in the form of text and one single json. The text is
+    the Introduction, the recommendations in the form of one single json with five
+    keys: recommendation_type, recommendation_name, recommendation_description, reasoning,
+    image_generation_prompt.'
+theme:
+  enum:
+  - fashion_recommendation
+  - decoration_recommendation
+  - none
+  type: string
+response_schema:
+  decoration_recommendation:
+    type: "object"
+    properties:
+      Architectural_Styles:
+        type: "string"
+      Reason_for_Architectural_Styles:
+        type: "string"
+      Interior_Decoration_and_Design_Styles:
+        type: "string"
+      Reaosn_for_Interior_Decoration_and_Design_Styles:
+        type: "string"
+      Furniture_Recommendation:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            recommendation_type:
+              type: "string"
+            furniture_name:
+              type: "string"
+            furniture_description:
+              type: "string"
+            reasoning:
+              type: "string"
+            image_generation_prompt:
+              type: "string"
+          required:
+            - recommendation_type
+            - furniture_name
+            - furniture_description
+            - reasoning
+            - image_generation_prompt
+    required:
+      - Architectural_Styles
+      - Interior_Decoration_and_Design_Styles
+      - Furniture_Recommendation
