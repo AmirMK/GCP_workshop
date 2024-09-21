@@ -15,7 +15,7 @@ prompt:
     \ Outfits: Outfits that are in harmony with the current ones, maintaining similar\
     \ colors, patterns, and styles.\n    - Contrasting Complementary Outfits: Outfits\
     \ that provide a contrasting look while complementing the current one.\n\n   \
-    \ For each category, provide 5 outfit recommendations. Please follow these steps:\n\
+    \ For each category, provide 3 outfit recommendations. Please follow these steps:\n\
     \n    First analyze the provided image or video of a person's outfit and as the\
     \ part of introduction provide below information:      \n\n      - Describe the\
     \ person's current outfit, including colors, patterns, fabrics, and overall style\
@@ -23,11 +23,11 @@ prompt:
     \ pear, apple, hourglass) and provide a brief description.\n      - Note the individual's\
     \ skin tone and hair color.                \n      - Highlight any style preferences\
     \ or patterns in the current outfit, such as a preference for bold prints, minimalist\
-    \ designs, or specific color schemes.\n\n    Then provide 5 outfit recommendations\
-    \ for:\n\n    - Harmonious Outfits:\n\n        - Suggest 5 outfits that maintain\
+    \ designs, or specific color schemes.\n\n    Then provide 3 outfit recommendations\
+    \ for:\n\n    - Harmonious Outfits:\n\n        - Suggest 3 outfits that maintain\
     \ similar colors, patterns, and styles.\n        - Ensure the outfits are cohesive\
     \ with the current style.\n\n    - Contrasting Complementary Outfits:\n\n    \
-    \    - Suggest 5 outfits that introduce contrasting elements while complementing\
+    \    - Suggest 3 outfits that introduce contrasting elements while complementing\
     \ the current look.\n        - Ensure the outfits are balanced and matched with\
     \ the existing outfit.\n\n    When provide recommendation make sure:\n       \
     \ - Suggest colors that complement their skin tone and hair color.\n        -\
@@ -100,16 +100,16 @@ response_schema:
         type: "string"
       Reaosn_for_Interior_Decoration_and_Design_Styles:
         type: "string"
-      Furniture_Recommendation:
+      Recommendation:
         type: "array"
         items:
           type: "object"
           properties:
             recommendation_type:
               type: "string"
-            furniture_name:
+            recommendation_name:
               type: "string"
-            furniture_description:
+            recommendation_description:
               type: "string"
             reasoning:
               type: "string"
@@ -117,11 +117,43 @@ response_schema:
               type: "string"
           required:
             - recommendation_type
-            - furniture_name
-            - furniture_description
+            - recommendation_name
+            - recommendation_description
             - reasoning
             - image_generation_prompt
     required:
       - Architectural_Styles
       - Interior_Decoration_and_Design_Styles
-      - Furniture_Recommendation
+      - Recommendation
+  fashion_recommendation:
+    type: "object"
+    properties:
+      Current_Outfit:
+        type: "string"
+      Style_Preferences:
+        type: "string"      
+      Recommendation:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            recommendation_type:
+              type: "string"
+            recommendation_name:
+              type: "string"
+            recommendation_description:
+              type: "string"
+            reasoning:
+              type: "string"
+            image_generation_prompt:
+              type: "string"
+          required:
+            - recommendation_type
+            - recommendation_name
+            - recommendation_description
+            - reasoning
+            - image_generation_prompt
+    required:
+      - Current_Outfit
+      - Style_Preferences
+      - Recommendation
